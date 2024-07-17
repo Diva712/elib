@@ -7,7 +7,7 @@ import { config } from "../config/config";
 import { User } from './userTypes';
 
 
-
+//register user
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
   //validation
   const { name, email, password } = req.body;
@@ -47,16 +47,37 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
     const token = sign({ sub: newUser._id }, config.jwtSecret as string, { expiresIn: '7d' });
     
   //Response
-  res.json({accessToken: token})
+  res.status(201).json({accessToken: token})
   } catch (error) {
     return next(createHttpError(500 , "Error while generating token !!"))
   }
   
 };
 
-
+//login user
 const loginUser = async (req: Request, res: Response, next: NextFunction) => {
-  res.json({message: "Hii"})
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return next(createHttpError(400, "All fields are required !!"));
+  }
+
+ try {
+ const user = await userModel.findOne({ email: email });
+   if (!user) {
+     return next(createHttpError(400, "User not found !!"));
+   }
+   //compare password 
+   const isMatched = await bcrypt.compare(password, user.password);
+   if (!isMatched) {
+     return next(createHttpError(401, "Invalid credentials !!"))
+   }
+
+   //genrate new access token
+    const token = sign({ sub: user._id }, config.jwtSecret as string, { expiresIn: '7d' });
+    res.json({accessToken : token})
+ } catch (error) {
+  return next(createHttpError(500, "Error during user getting from database !!"))
+ }
 }
 
 export { createUser , loginUser};
