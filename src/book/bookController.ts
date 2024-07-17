@@ -92,6 +92,17 @@ const updateBook = async (req: Request, res: Response, next: NextFunction) => {
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
   let completeCoverImage = "";
   if (files.coverImage) {
+
+    //delete present image in cloudinary which you have to change
+    const coverFileSplits = book?.coverImage.split("/");
+    const coverImagePublicId = coverFileSplits?.at(-2) + '/' + (coverFileSplits?.at(-1)?.split('.').at(-2));
+
+    try {
+       await cloudinary.uploader.destroy(coverImagePublicId);
+    } catch (error) {
+      next(createHttpError(500, "Error in delete process while updating a cover image "))
+    }
+
     const fileName = files.coverImage[0].filename;
     const coverMineType = files.coverImage[0].mimetype.split("/").at(-1);
 
@@ -116,6 +127,22 @@ const updateBook = async (req: Request, res: Response, next: NextFunction) => {
   // check if file field is exists
   let completeFileName = "";
   if (files.file) {
+
+    //deleting a present image which you have to update
+
+    const pdfFileSplits = book?.file.split("/");
+    const pdfFilePublidId = pdfFileSplits?.at(-2) + '/' + pdfFileSplits?.at(-1);
+
+    try {
+      await cloudinary.uploader.destroy(pdfFilePublidId, {
+        resource_type: "raw"
+     })
+    } catch (error) {
+      next(createHttpError(500 , "Error in deleting process in pdf while updating !!"))
+    }
+
+
+
     const bookFilePath = path.resolve(__dirname, "../../public/data/uploads/" + files.file[0].filename);
 
     const bookFileName = files.file[0].filename;
@@ -195,14 +222,14 @@ const deleteBook = async (req: Request, res: Response, next: NextFunction) => {
 
     try {
 
-     const d1 = await cloudinary.uploader.destroy(coverImagePublicId);
+      await cloudinary.uploader.destroy(coverImagePublicId);
 
-     const d2 =  await cloudinary.uploader.destroy(pdfFilePublidId, {
+       await cloudinary.uploader.destroy(pdfFilePublidId, {
         resource_type: "raw"
      });
       
-      console.log( "d1:", d1);
-      console.log("d2:" , d2);
+      // console.log( "d1:", d1);
+      // console.log("d2:" , d2);
 
 
       await bookModel.deleteOne({ _id: req.params.bookId });
