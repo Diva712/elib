@@ -4,9 +4,10 @@ import fs from 'fs';
 import createHttpError from 'http-errors';
 import cloudinary from '../config/cloudinary';
 import bookModel from './bookModel';
+import { AuthRequest } from '../middlewares/authenticate';
 
 
-
+//upload book in cloud
 const createBook = async (req: Request, res: Response, next: NextFunction) => {
   const { title, genre } = req.body;
 
@@ -36,12 +37,14 @@ const createBook = async (req: Request, res: Response, next: NextFunction) => {
     console.log("CoverImageResult : ", uploadResult);
     console.log("BookUploadResult : ", bookFileUploadResult);
   
+    const _req = req as AuthRequest
     // Database operation in separate try/catch
     try {
+      
       const newBook = await bookModel.create({
         title,
         genre,
-        author: "6697bf6e8d37ffb5b607f1f9", // Consider making this dynamic
+        author: _req.userId, // Consider making this dynamic
         coverImage: uploadResult.secure_url,
         file: bookFileUploadResult.secure_url,
       });
