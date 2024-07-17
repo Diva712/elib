@@ -1,3 +1,4 @@
+
 import { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -70,4 +71,78 @@ const createBook = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-export {createBook};
+//update book 
+const updateBook = async (req: Request, res: Response, next: NextFunction) => {
+  const { title, genre } = req.body;
+
+  const bookId = req.params.bookId;
+
+  const book = await bookModel.findOne({ _id: bookId });
+
+  if (!book) {
+    next(createHttpError(404 , "Book not found !!"))
+  }
+  const _req = req as AuthRequest;
+
+  if (book?.author.toString() !== _req.userId) {
+    next(createHttpError(403 , "Unauthorized , You can not update !!"))
+  }
+
+  // now check the files a send or not
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+  let completeCoverImage = "";
+  if (files.coverImage) {
+    const fileName = files.coverImage[0].filename;
+    const coverMineType = files.coverImage[0].mimetype.split("/").at(-1);
+
+    const filePath = path.resolve(__dirname, "../../public/data/uploads/" + fileName);
+
+    completeCoverImage = fileName;
+    const uploadResult = await cloudinary.uploader.upload(filePath, {
+      filename_override: completeCoverImage,
+      format: coverMineType,
+      folder: "book-covers"
+    });
+
+    completeCoverImage = uploadResult.secure_url;
+    
+
+    //delete temp files
+    await fs.promises.unlink(filePath);
+
+  }
+
+
+  // check if file field is exists
+  let completeFileName = "";
+  if (files.file) {
+    const bookFilePath = path.resolve(__dirname, "../../public/data/uploads/" + files.file[0].filename);
+
+    const bookFileName = files.file[0].filename;
+    completeFileName = bookFileName;
+
+    const uploadResultPdf = await cloudinary.uploader.upload(bookFilePath, {
+      resource_type: "raw",
+      filename_override: completeFileName,
+      format: "pdf",
+      folder: "book-pdfs"
+    })
+
+    completeFileName = uploadResultPdf.secure_url;
+    await fs.promises.unlink(bookFilePath);
+
+  }
+
+  const updatedBook = await bookModel.findOneAndUpdate({ _id: bookId }, {
+    title: title,
+    genre: genre,
+    coverImage: completeCoverImage ? completeCoverImage : book?.coverImage,
+    file: completeFileName ? completeFileName : book?.file,
+  }, { new: true });
+
+
+  res.json({ updatedBook: updatedBook });
+  
+}
+
+export {createBook , updateBook};
