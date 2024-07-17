@@ -141,7 +141,7 @@ const updateBook = async (req: Request, res: Response, next: NextFunction) => {
   }, { new: true });
 
 
-  res.json({ updatedBook: updatedBook });
+  res.json(updatedBook);
   
 }
 
@@ -157,4 +157,20 @@ const getAllBook = async (req: Request, res: Response, next: NextFunction) => {
   }
 }
 
-export {createBook , updateBook , getAllBook};
+//get singleBook
+const getSingleBook = async (req: Request, res: Response, next: NextFunction) => {
+ try {
+   const book = await bookModel.findOne({ _id: req.params.bookId });
+   if (!book) {
+     next(createHttpError(404, "Book does't exist !!"));
+   }
+   return res.status(200).json(book)
+ } catch (error) {
+  next(createHttpError(500 , "Error While getting a book !!"))
+ }
+}
+
+export {
+  createBook, updateBook,
+  getAllBook , getSingleBook,
+};
