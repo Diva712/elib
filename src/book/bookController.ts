@@ -170,7 +170,59 @@ const getSingleBook = async (req: Request, res: Response, next: NextFunction) =>
  }
 }
 
+//deleteBook
+const deleteBook = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+
+   const book = await bookModel.findOne({ _id: req.params.bookId });
+   if (!book) {
+     next(createHttpError(404, "Book does't exist !!"));
+    }
+
+  
+  // const _req = req as AuthRequest;
+
+  // if (book?.author.toString() !== _req.userId) {
+  //   next(createHttpError(403 , "Unauthorized , You can not update !!"))
+  //   }
+    
+    //delete from cloudinary coverImage and file pdf
+    const coverFileSplits = book?.coverImage.split("/");
+    const coverImagePublicId = coverFileSplits?.at(-2) + '/' + (coverFileSplits?.at(-1)?.split('.').at(-2));
+
+    const pdfFileSplits = book?.file.split("/");
+    const pdfFilePublidId = pdfFileSplits?.at(-2) + '/' + pdfFileSplits?.at(-1);
+
+    try {
+
+     const d1 = await cloudinary.uploader.destroy(coverImagePublicId);
+
+     const d2 =  await cloudinary.uploader.destroy(pdfFilePublidId, {
+        resource_type: "raw"
+     });
+      
+      console.log( "d1:", d1);
+      console.log("d2:" , d2);
+
+
+      await bookModel.deleteOne({ _id: req.params.bookId });
+
+      return res.status(204).send("deleted");
+      
+    } catch (error) {
+      next(createHttpError(500 , "Error during deleteing files from cloudinary !!"))
+    }
+    
+
+    
+    
+  } catch (error) {
+    next(createHttpError(500 , "Error while during delete Book !!"))
+  }
+}
+
 export {
   createBook, updateBook,
-  getAllBook , getSingleBook,
+  getAllBook, getSingleBook,
+  deleteBook
 };
